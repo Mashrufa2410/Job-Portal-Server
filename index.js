@@ -5,12 +5,6 @@ require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const app = express();
-const port = process.env.PORT || 5000;
-
-if (!process.env.DB_USER || !process.env.DB_PASS) {
-    console.error('Missing MongoDB credentials in environment variables.');
-    process.exit(1);
-}
 
 app.use(cors());
 app.use(express.json());
@@ -31,7 +25,6 @@ async function run() {
         const jobsCollection = db.collection('jobs');
         const jobApplicationsCollection = db.collection('job_applications');
 
-        // Get all jobs
         app.get('/jobs', async (req, res) => {
             const email = req.query.email;
             let query = {};
@@ -44,26 +37,21 @@ async function run() {
             res.send(result);
         });
 
-        // Add a new job
         app.post('/jobs', async (req, res) => {
             const newJob = req.body;
-
             if (!newJob.title || !newJob.company || !newJob.location || !newJob.salaryRange) {
                 return res.status(400).send({ message: "Missing required fields" });
             }
-
             const result = await jobsCollection.insertOne(newJob);
             res.status(201).send(result);
         });
 
-        // Get job by ID
         app.get('/jobs/:id', async (req, res) => {
             const job = await jobsCollection.findOne({ _id: new ObjectId(req.params.id) });
             if (!job) return res.status(404).send({ message: "Job not found" });
             res.status(200).send(job);
         });
 
-        // Apply for a job
         app.post('/job-applications', async (req, res) => {
             const application = req.body;
             if (!application.job_id || !application.applicant_email) {
@@ -73,10 +61,8 @@ async function run() {
             res.status(201).send(result);
         });
 
-        // Get applications (with optional email filtering)
         app.get('/job-applications', async (req, res) => {
             const email = req.query.email;
-            
             const query = email ? { applicant_email: email } : {};
             const applications = await jobApplicationsCollection.find(query).toArray();
 
@@ -103,6 +89,5 @@ app.use((err, req, res, next) => {
     res.status(500).send({ message: 'Something went wrong!', error: err.message });
 });
 
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-});
+// Vercel requires this export for serverless functions
+module.exports = app;
